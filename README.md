@@ -67,7 +67,7 @@ $ python train_lep.py
     </center>
 </div>
 
-Fig.2 is a schematic depiction of a formaldehyde ($CH_2O$) molecule. The distances of the bonds in the figure are approximations and are primarily intended for illustrative purposes only. The unit of length used in the figure is $\AA$, and to distinguish between the two hydrogen atoms, they are labeled with superscript numbers. In this representations, solid lines are utilized to represent edges where the bond distance exceeds 2$\AA$, while dotted lines are employed for those with distance less than 2 $\AA$.
+Fig.2 is a schematic depiction of a formaldehyde ($CH_2O$) molecule. The distances of the bonds in the figure are approximations and are primarily intended for illustrative purposes only. The unit of length used in the figure is $$\AA$$, and to distinguish between the two hydrogen atoms, they are labeled with superscript numbers. In this representations, solid lines are utilized to represent edges where the bond distance exceeds 2, while dotted lines are employed for those with distance less than 2.
 
 ##### 5.2 Molecular Relational Learning
 
