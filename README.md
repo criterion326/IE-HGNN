@@ -55,7 +55,7 @@ $ python train_lep.py
 
 ##### 5.1 Hypergraph and simple graph
 
-​	Different from simple graphs, a hypergraph can describe high-order connection among molecules, and its edges are called hyperedge, which could link two or more nodes in a graph. You can see the difference from an example of a 
+​	Different from simple graphs, a hypergraph can describe high-order connection among molecules, and its edges are called hyperedge, which could link two or more nodes in a graph. You can see the difference from an example of a formaldehyde molecule.
 
 <div>			<!--块级封装-->
     <center>	<!--将图片和文字居中-->
