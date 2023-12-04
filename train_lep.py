@@ -1,4 +1,19 @@
 from models.IEHGNN import IEHGNN
+from utils.ddi_data import My_dataset, CollaterLBA
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch_geometric.transforms as T
+import pandas as pd
+import numpy as np
+from rdkit import Chem
+import os
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import KFold, train_test_split
+from torch.utils.data import DataLoader
+import time
+import dill
+
 
 def train_loop(model, loader, optimizer, device):
     model.train()
@@ -55,13 +70,15 @@ def save_weights(model, weight_dir):
 
 def train(device, log_dir, rep=None, test_mode=False):
     datadir = './data/lep_seed=23_r=4.5_lim=10/'
-    train_loader=dill.load(open(os.path.join(datadir, 'train_loader.pkl'), 'rb'))
-    val_loader=dill.load(open(os.path.join(datadir, 'val_loader.pkl'), 'rb'))
-    test_loader=dill.load(open(os.path.join(datadir, 'test_loader.pkl'), 'rb'))
+    train_loader = dill.load(
+        open(os.path.join(datadir, 'train_loader.pkl'), 'rb'))
+    val_loader = dill.load(open(os.path.join(datadir, 'val_loader.pkl'), 'rb'))
+    test_loader = dill.load(
+        open(os.path.join(datadir, 'test_loader.pkl'), 'rb'))
     hidden_dim = 64
     learning_rate = 0.0001
     num_epochs = 30
-    model = IEHGNN(18,hidden_dim)
+    model = IEHGNN(18, hidden_dim)
     model.to(device)
     best_val_loss = 999
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

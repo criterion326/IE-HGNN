@@ -30,6 +30,7 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from atom3d.datasets import LMDBDataset
 
+
 def get_neighbors_by_distance(pos, r=3, limit=10):
     tree = scipy.spatial.cKDTree(pos)
     edges = tree.query_ball_point(pos, r=r, workers=1)  #最近邻还是阈值？？？
@@ -60,6 +61,7 @@ def get_hyperedges(edges, edge_weights):
         ew.extend([w / len(e)] * len(e))
         es.extend(e)
     return torch.LongTensor([es, idx]), torch.FloatTensor(ew)
+
 
 # PDB atom names -- these include co-crystallized metals
 prot_atoms = [
@@ -118,6 +120,7 @@ residues = [
     'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
 ]
 
+
 # below functions are adapted from DeepChem repository:
 def one_of_k_encoding(x, allowable_set):
     """Converts input to 1-hot encoding given a set of allowable values."""
@@ -126,15 +129,19 @@ def one_of_k_encoding(x, allowable_set):
             x, allowable_set))
     return list(map(lambda s: x == s, allowable_set))
 
+
 def one_of_k_encoding_unk(x, allowable_set):
     """Converts input to 1-hot encoding given a set of allowable values. Additionally maps inputs not in the allowable set to the last element."""
     if x not in allowable_set:
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
+
+
 def prot_df_to_graph(df,
                      feat_col='element',
                      allowable_feats=prot_atoms,
-                     edge_dist_cutoff=4.5,label=None):
+                     edge_dist_cutoff=4.5,
+                     label=None):
     node_pos = torch.FloatTensor(df[['x', 'y', 'z']].to_numpy())
     node_feats = torch.FloatTensor(
         [one_of_k_encoding_unk(e, allowable_feats) for e in df[feat_col]])
@@ -142,9 +149,10 @@ def prot_df_to_graph(df,
         *get_neighbors_by_distance(node_pos, r=edge_dist_cutoff, limit=10))
     g = Data(x=node_feats,
              edge_index=es,
-                 edge_attr=ew,
-                 y=torch.LongTensor(label))
+             edge_attr=ew,
+             y=torch.LongTensor(label))
     return g
+
 
 def mol_df_to_graph(df,
                     allowable_atoms=None,
@@ -173,13 +181,12 @@ def mol_df_to_graph(df,
     return g
 
 
-
 class My_dataset(Dataset):
     r'''
     自定义dataset.
     '''
 
-    def __init__(self,idx,data):
+    def __init__(self, idx, data):
         super().__init__()
         self.data = []
         for i in tqdm(idx, position=0):
@@ -189,14 +196,15 @@ class My_dataset(Dataset):
             protein_inactive = inactive[inactive.chain != 'L']
             ligand_active = active[active.chain == 'L']
             ligand_inactive = inactive[inactive.chain == 'L']
-            pro_active_hg=prot_df_to_graph(protein_active,label=np.array([1]))
+            pro_active_hg = prot_df_to_graph(protein_active,
+                                             label=np.array([1]))
             pro_inactive_hg = prot_df_to_graph(protein_inactive,
                                                label=np.array([0]))
             lig_active_hg = mol_df_to_graph(ligand_active, label=np.array([1]))
             lig_inactive_hg = mol_df_to_graph(ligand_inactive,
                                               label=np.array([0]))
-            self.data.append((pro_active_hg,lig_active_hg))
-            self.data.append((pro_inactive_hg,lig_inactive_hg))
+            self.data.append((pro_active_hg, lig_active_hg))
+            self.data.append((pro_inactive_hg, lig_inactive_hg))
         # self.data=list(eq_graph_tensors.values())
     def __getitem__(self, index):
         return self.data[index]

@@ -1,4 +1,7 @@
 import datetime
+import matplotlib.pyplot as plt
+
+
 def draw_losses(losses, title=['', ''], save_dir='./'):
     plt.figure(figsize=(6, 7))
     plt.xlabel('epoches', fontsize=10)

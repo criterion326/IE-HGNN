@@ -7,6 +7,11 @@ import pandas as pd
 import numpy as np
 from rdkit import Chem
 import os
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import KFold, train_test_split
+from torch.utils.data import DataLoader
+import time
+from models.IEHGNN import IEHGNN
 
 
 def train_loop(model, loader, optimizer, device):
@@ -109,9 +114,8 @@ def train(device, log_dir, rep=None, test_mode=False):
     hidden_dim = 64
     learning_rate = 0.001
     num_epochs = 30
-    # model = GNN_LBA(num_features, hidden_dim=args.hidden_dim).to(device)
-    # model = IE_HGNN(27, args.hidden_dim, 1, 0.1)
-    model = MLP(hidden_dim)
+    model = IEHGNN(27, hidden_dim, 1, 0.1)
+    # model = MLP(hidden_dim)
     model.to(device)
     best_val_loss = 999
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

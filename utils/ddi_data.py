@@ -4,6 +4,8 @@ from torch_geometric.data import Dataset
 from torch_geometric.data import Data, Batch
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+import pandas as pd
+import numpy as np
 
 element_names = [
     "C",
@@ -55,10 +57,6 @@ element_names = [
 
 @dataclass
 class BondConfig:
-    """
-    A class to configure which features should be included
-    in the bond fingerprint
-    """
 
     bond_type: bool
     conjugation: bool
@@ -85,10 +83,6 @@ class BondConfig:
 
 @dataclass
 class AtomConfig:
-    """
-    A class to configure which features should be included
-    in the atom fingerprint
-    """
 
     element_type: bool
     degree: bool
@@ -136,23 +130,8 @@ class AtomConfig:
         if self.aromatic:
             update(["Aromatic"])
 
+
 def bond_fp(bond, config):
-    """Helper method used to compute bond feature vectors.
-    Many different featurization methods compute bond features
-    such as WeaveFeaturizer. This method computes such features.
-    Parameters
-    ----------
-    use_chirality: bool, optional
-      If true, use chirality information.
-    Note
-    ----
-    This method requires RDKit to be installed.
-    Returns
-    -------
-    bond_feats: np.ndarray
-      Array of bond features. This is a 1-D array of length 6 if `use_chirality`
-      is `False` else of length 10 with chirality encoded.
-    """
 
     bt = bond.GetBondType()
     bond_feats = []
@@ -172,22 +151,6 @@ def bond_fp(bond, config):
 
 
 def one_of_k_encoding(x, allowable_set):
-    """Encodes elements of a provided set as integers.
-    Parameters
-    ----------
-    x: object
-      Must be present in `allowable_set`.
-    allowable_set: list
-      List of allowable quantities.
-    Example
-    -------
-    >>> import deepchem as dc
-    >>> dc.feat.graph_features.one_of_k_encoding("a", ["a", "b", "c"])
-    [True, False, False]
-    Raises
-    ------
-    `ValueError` if `x` is not in `allowable_set`.
-    """
     if x not in allowable_set:
         raise ValueError("input {0} not in allowable set{1}:".format(
             x, allowable_set))
@@ -195,40 +158,12 @@ def one_of_k_encoding(x, allowable_set):
 
 
 def one_of_k_encoding_unk(x, allowable_set):
-    """Maps inputs not in the allowable set to the last element.
-    Unlike `one_of_k_encoding`, if `x` is not in `allowable_set`, this method
-    pretends that `x` is the last element of `allowable_set`.
-    Parameters
-    ----------
-    x: object
-      Must be present in `allowable_set`.
-    allowable_set: list
-      List of allowable quantities.
-    Examples
-    --------
-    >>> dc.feat.graph_features.one_of_k_encoding_unk("s", ["a", "b", "c"])
-    [False, False, True]
-    """
     if x not in allowable_set:
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
 
+
 def atom_fp(atom, atom_config: AtomConfig):
-    """
-    Helper method used to compute per-atom feature vectors.
-    Many different featurization methods compute per-atom features such as ConvMolFeaturizer, WeaveFeaturizer. This method computes such features.
-    Parameters
-    ----------
-    bool_id_feat: bool, optional
-    Return an array of unique identifiers corresponding to atom type.
-    explicit_H: bool, optional
-    If true, model hydrogens explicitly
-    use_chirality: bool, optional
-    If true, use chirality information.
-    Returns
-    -------
-    np.ndarray of per-atom features.
-    """
     results = []
     if atom_config.element_type:
         results += one_of_k_encoding_unk(
@@ -287,7 +222,8 @@ def atom_helper(molecule, ind, atom_config):
     # chirality
     #############################
     return atom_feature
-  
+
+
 import torch
 from torch_geometric.data import Data
 
@@ -302,8 +238,11 @@ atom_config = AtomConfig(
     combo_hybrid=False,  # if True, SP2/SP3 are combined into one feature
     aromatic=True,
 )
+
+
 def construct_graph(
-    molecule,y,
+    molecule,
+    y,
     bond_config,
     atom_config,
 ):
@@ -338,19 +277,23 @@ def construct_graph(
     )
     return data
 
+
 class My_dataset(Dataset):
     '''
     自定义dataset.
     '''
+
     def __init__(self, df):
         super().__init__()
         self.data = []
-        for i in tqdm_notebook(range(len(df)),position=0):
-            mol1=Chem.MolFromSmiles(df['smiles_1'][i])
-            mol2=Chem.MolFromSmiles(df['smiles_2'][i])
-            graph1 = construct_graph(mol1, df['label'][i],bond_config, atom_config)
-            graph2 = construct_graph(mol2, df['label'][i],bond_config, atom_config)
-            self.data.append((graph1,graph2))
+        for i in tqdm_notebook(range(len(df)), position=0):
+            mol1 = Chem.MolFromSmiles(df['smiles_1'][i])
+            mol2 = Chem.MolFromSmiles(df['smiles_2'][i])
+            graph1 = construct_graph(mol1, df['label'][i], bond_config,
+                                     atom_config)
+            graph2 = construct_graph(mol2, df['label'][i], bond_config,
+                                     atom_config)
+            self.data.append((graph1, graph2))
         # self.data=list(eq_graph_tensors.values())
     def __getitem__(self, index):
         return self.data[index]
@@ -358,36 +301,51 @@ class My_dataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+
 class CollaterDDI(object):
+
     def __init__(self):
         pass
+
     def __call__(self, data_list):
         # batch = Batch.from_data_list([d for d in data_list])
         batch1 = Batch.from_data_list([d[0] for d in data_list])
         batch2 = Batch.from_data_list([d[1] for d in data_list])
-        return batch1,batch2
+        return batch1, batch2
 
 
-if __name__=='__main__':
-  basedir='./data/zhangDDI/'
-  train_df=pd.read_csv(os.path.join(basedir,'ZhangDDI_train.csv'))
-  val_df=pd.read_csv(os.path.join(basedir,'ZhangDDI_valid.csv'))
-  test_df = pd.read_csv(os.path.join(basedir,'ZhangDDI_test.csv'))
-  # df=pd.read_csv(os.path.join(basedir,'ZhangDDI_all=95245.csv'))
-  drug_list_df=pd.read_csv( os.path.join(basedir,'drug_list_zhang.csv'))
-  df = pd.concat([train_df, val_df, test_df], axis=0)
-  df.drop_duplicates(subset=['drugbank_id_1', 'drugbank_id_2'], inplace=True)
-  df.reset_index(drop=True, inplace=True)
-  all_drugs=drug_list_df.drugbank_id.values
-  np.random.seed(25)
-  # idxs = np.random.permutation(len(all_drugs))
-  idxs=np.loadtxt('./zhangddi_idxs=20-25.txt',dtype=int)
-  # idxs[:400]
-  old,new=all_drugs[idxs[3,:470]],all_drugs[idxs[3,470:]]
-  batch_size=64
-  train_datasets = My_dataset(train_df)
-  val_datasets = My_dataset(val_df)
-  test_datasets = My_dataset(test_df)
-  train_loader = DataLoader(train_datasets, batch_size=batch_size , shuffle=True,drop_last=True,collate_fn=CollaterLBA())
-  val_loader=DataLoader(val_datasets, batch_size=batch_size, shuffle=False,drop_last=True,collate_fn=CollaterLBA())
-  test_loader = DataLoader(test_datasets, batch_size=batch_size, shuffle=False,drop_last=True,collate_fn=CollaterLBA())
+if __name__ == '__main__':
+    basedir = './data/zhangDDI/'
+    train_df = pd.read_csv(os.path.join(basedir, 'ZhangDDI_train.csv'))
+    val_df = pd.read_csv(os.path.join(basedir, 'ZhangDDI_valid.csv'))
+    test_df = pd.read_csv(os.path.join(basedir, 'ZhangDDI_test.csv'))
+    # df=pd.read_csv(os.path.join(basedir,'ZhangDDI_all=95245.csv'))
+    drug_list_df = pd.read_csv(os.path.join(basedir, 'drug_list_zhang.csv'))
+    df = pd.concat([train_df, val_df, test_df], axis=0)
+    df.drop_duplicates(subset=['drugbank_id_1', 'drugbank_id_2'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    all_drugs = drug_list_df.drugbank_id.values
+    np.random.seed(25)
+    # idxs = np.random.permutation(len(all_drugs))
+    idxs = np.loadtxt('./zhangddi_idxs=20-25.txt', dtype=int)
+    # idxs[:400]
+    old, new = all_drugs[idxs[3, :470]], all_drugs[idxs[3, 470:]]
+    batch_size = 64
+    train_datasets = My_dataset(train_df)
+    val_datasets = My_dataset(val_df)
+    test_datasets = My_dataset(test_df)
+    train_loader = DataLoader(train_datasets,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              drop_last=True,
+                              collate_fn=CollaterLBA())
+    val_loader = DataLoader(val_datasets,
+                            batch_size=batch_size,
+                            shuffle=False,
+                            drop_last=True,
+                            collate_fn=CollaterLBA())
+    test_loader = DataLoader(test_datasets,
+                             batch_size=batch_size,
+                             shuffle=False,
+                             drop_last=True,
+                             collate_fn=CollaterLBA())
