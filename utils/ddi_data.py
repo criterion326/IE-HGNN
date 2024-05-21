@@ -37,7 +37,7 @@ element_names = [
     "Se",
     "Ti",
     "Zn",
-    "H",  # H?
+    "H",
     "Li",
     "Ge",
     "Cu",

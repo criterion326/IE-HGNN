@@ -1,12 +1,12 @@
-
 from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import add_self_loops, degree
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.transforms as T
-from cross_att import CrossAttentionLayer
-from hgnnconv import HGNNConv
+from models.cross_att import CrossAttentionLayer
+from torch_geometric.nn import HypergraphConv
+from torch_geometric.nn import global_mean_pool, global_add_pool
+
 
 class ReadoutModule(torch.nn.Module):
 
@@ -72,14 +72,14 @@ class MLPModule(torch.nn.Module):
 
 class IEHGNN(torch.nn.Module):
 
-    def __init__(self,in_dim, hidden_dim):
+    def __init__(self, in_dim, hidden_dim):
         super().__init__()
-        self.gnn1 = HGNNConv(in_channels=18,
-                             out_channels=hidden_dim,
-                             dropout=0.1)
-        self.gnn2 = HGNNConv(in_channels=43,
-                             out_channels=hidden_dim,
-                             dropout=0.1)
+        self.gnn1 = HypergraphConv(in_channels=18,
+                                   out_channels=hidden_dim,
+                                   dropout=0.1)
+        self.gnn2 = HypergraphConv(in_channels=43,
+                                   out_channels=hidden_dim,
+                                   dropout=0.1)
         self.fc1 = nn.Linear(hidden_dim * 2, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 1)
         self.interaction1 = CrossAttentionLayer(hidden_dim, hidden_dim)
@@ -100,10 +100,43 @@ class IEHGNN(torch.nn.Module):
         att_f1_conv1 = self.readout1(h3, g1.batch)
         att_f2_conv1 = self.readout1(h4, g2.batch)
         score1 = torch.cat([att_f1_conv1, att_f2_conv1], dim=1)
-        h5,h6 = self.interaction2(h3, g1.batch, h4, g2.batch)
-        att_f1_conv2=self.readout1(h5,g1.batch)
-        att_f2_conv2=self.readout1(h6,g2.batch)
-        score2=torch.cat([att_f1_conv2,att_f2_conv2],dim=1)
-        scores = torch.cat([score0,score1,score2], dim=1)
+        h5, h6 = self.interaction2(h3, g1.batch, h4, g2.batch)
+        att_f1_conv2 = self.readout1(h5, g1.batch)
+        att_f2_conv2 = self.readout1(h6, g2.batch)
+        score2 = torch.cat([att_f1_conv2, att_f2_conv2], dim=1)
+        scores = torch.cat([score0, score1, score2], dim=1)
         x = self.mlp(scores)
         return x.view(-1)
+
+
+class GNN_LEP(torch.nn.Module):
+
+    def __init__(self, num_features, hidden_dim):
+        super(GNN_LEP, self).__init__()
+        self.conv1 = HypergraphConv(num_features, hidden_dim)
+        self.conv2 = HypergraphConv(hidden_dim, hidden_dim * 2)
+        self.fc1 = nn.Linear(hidden_dim * 2, hidden_dim * 2)
+
+    def forward(self, x, edge_index, edge_weight, batch):
+        x = self.conv1(x, edge_index, edge_weight)
+        x = F.relu(x)
+        x = F.dropout(x, p=0.1, training=self.training)
+        x = self.conv2(x, edge_index, edge_weight)
+        x = F.relu(x)
+        x = F.dropout(x, p=0.1, training=self.training)
+        return x
+
+
+class MLP_LEP(torch.nn.Module):
+
+    def __init__(self, hidden_dim):
+        super(MLP_LEP, self).__init__()
+        self.fc1 = nn.Linear(hidden_dim * 4, hidden_dim * 2)
+        self.fc2 = nn.Linear(hidden_dim * 2, 1)
+
+    def forward(self, input1, input2):
+        x = torch.cat((input1, input2), dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, p=0.25, training=self.training)
+        x = self.fc2(x)
+        return torch.sigmoid(x).view(-1)
