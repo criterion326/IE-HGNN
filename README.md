@@ -35,10 +35,10 @@ $ pip install rdkit==2022.9.3
 
 You can download the datasets via reference URL in the follow table.
 
-|  <span style="display:inline-block;width:150px">Datasets</span>                         |                         <span style="display:inline-block;width:250px">Description</span>                          |     Tasks      |                          Reference                           |
+|  <span style="display:inline-block;width:150px">Datasets</span>                         |                         <span style="display:inline-block;width:250px">Description</span>                          |     Tasks      |              
 | :-----------------------------: | :------------------------------------------: | :------------: | :-----------------------------------: |
-| LEP (Ligand Efficacy Prediction) | To predict whether the ligand activates the protein or inhibit. | Classification |              https://zenodo.org/record/4914734               |
-|            ZhangDDI             |   To forecast whether two drug molecules interact or not.    | Classification | https://github.com/isjakewong/MIRACLE/tree/main/MIRACLE/datachem |
+| LEP (Ligand Efficacy Prediction) | To predict whether the ligand activates the protein or inhibit. | Classification |              
+|            ZhangDDI             |   To forecast whether two drug molecules interact or not.    | Classification | 
 
 ### 4. Training
 
